@@ -517,5 +517,93 @@ bool CacheConn::hmget(string key, list<string>& fields, list<string>& ret_value)
         return false;
     }
 
+    auto argc = fields.size() + 2;
+    const char** argv = new char[argc];
 
+    auto i = 0;
+    argv[i++] = "hmget";
+    argv[i++] = key.c_str();
+
+    for (auto str : fields) {
+        argv[i++] = str.c_str();
+    }
+
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, argc, argv, nullptr);
+    if (nullptr == reply) {
+        log("redisCommend failed %s", m_pContext->errstr);
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        delete [] argv;
+        return false;
+    }
+
+    if (REDIS_REPLY_ARRAY == reply->type) {
+        for (auto i = 0; i < reply->elements; i++) {
+            redisReply* ret_reply = reply->element[i];
+            ret_value.push_back(ret_reply->integer);
+        }
+        freeReplyObject(reply);
+        delete [] argv;
+        return true;
+    }
+    
+    delete [] argv;
+    freeReplyObject(reply);
+    return false;
+}
+
+long CacheConn::incr(string key) {
+    if (Init()) {
+        return -1;
+    }
+
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, "INCR %s", key.c_str());
+    if (nullptr == reply) {
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+
+    long ret_value = -1;
+
+    if (REDIS_REPLY_INTEGER == reply->type) {
+        ret_value = reply->integer;
+    } else if (REDIS_REPLY_ERROR == reply->type) {
+        log("redisCommend failed %s", reply->str);
+    }
+
+    freeReplyObject(reply);
+    return ret_value;
+}
+
+long CacheConn::decr(string key) {
+    if (Init()) {
+        return -1;
+    }
+
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, "DECR %s", key.c_str());
+    if (nullptr == reply) {
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+
+    long ret_value = -1;
+
+    if (REDIS_REPLY_INTEGER == reply->type) {
+        ret_value = reply->integer;
+    } else if (REDIS_REPLY_ERROR == reply->type) {
+        log("redisCommend failed %s", reply->str);
+    }
+
+    freeReplyObject(reply);
+    return ret_value;
+}
+
+long CacheConn::lpush(string key, string value) {
+    if (Init()) {
+        return 0;
+    }
+
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, "");
 }
