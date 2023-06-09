@@ -480,3 +480,42 @@ long CacheConn::incrBy(string key, long value) {
     freeReplyObject(reply);
     return ret_value;
 }
+
+string CacheConn::hmset(string key, map<string, string>& hash) {
+    string ret_value;
+    if (Init()) {
+        return ret_value;
+    }
+    int argc = hash.size() * 2 + 2;
+    const char ** argv = new const char* [argc];
+
+    argv[0] = "hmset";
+    argv[1] = key.c_str();
+    int i = 2;
+    for (const auto& pair : hash) {
+        argv[i++] = pair.first.c_str();
+        argv[i++] = pair.second.c_str();
+    }
+
+    redisReply* reply = (redisReply*) redisCommandArgv(m_pContext, argc, argv, nullptr);
+    
+    if (nullptr == reply) {
+        log("redisCommend failed %s", m_pContext->errstr);
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        delete [] argv;
+        return ret_value;
+    }
+
+    ret_value.append(reply->str, reply->len);
+    delete [] argv;
+    return ret_value;
+}
+
+bool CacheConn::hmget(string key, list<string>& fields, list<string>& ret_value) {
+    if (Init()) {
+        return false;
+    }
+
+
+}
