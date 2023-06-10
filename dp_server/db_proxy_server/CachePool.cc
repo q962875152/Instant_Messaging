@@ -1,6 +1,7 @@
 #include "CachePool.h"
 #include "ConfigFileReader.h"
 #include "util.h"
+#include "stdint.h"
 
 std::mutex CacheManager::mutex;
 CacheManager::s_cache_manager = nullptr;//静态成员需要初始化
@@ -82,6 +83,18 @@ CacheConn* CacheManager::GetCacheConn(const char* pool_name) {
     } else {
         return nullptr;
     }
+}
+
+void CacheManager::RelCacheConn(CacheConn* pCacheConn) {
+    if (nullptr == pCacheConn) {
+        return;
+    }
+
+    auto it = m_cache_pool_map.find(pCacheConn->GetPoolName());
+    if (it != m_cache_pool_map.end()) {
+        return it->second->RelCacheConn(pCacheConn);
+    }
+
 }
 
 //******************************CachePool***********************************//
@@ -427,12 +440,12 @@ bool CacheConn::hgetAll(stirng key, map<string, string> ret_value) {
     return true;
 }
 
-long CacheConn::hset(string key, string value) {
+long CacheConn::hset(string key, string field, string value) {
     if (Init()) {
         return -1;
     }
 
-    redisReply* reply = (redisReply*) redisCommand(m_pContext, "hset %s %s", key, value);
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, "hset %s %s %s", key.c_str(), field.c_str(), value.c_str());
     if (nullptr == reply) {
         log("redisCommend failed %s", m_pContext->errstr);
         redisFree(m_pContext);
@@ -559,6 +572,7 @@ long CacheConn::incr(string key) {
 
     redisReply* reply = (redisReply*) redisCommand(m_pContext, "INCR %s", key.c_str());
     if (nullptr == reply) {
+        log("redisCommend failed %s", m_pContext->errstr);
         redisFree(m_pContext);
         m_pContext = nullptr;
         return -1;
@@ -583,6 +597,7 @@ long CacheConn::decr(string key) {
 
     redisReply* reply = (redisReply*) redisCommand(m_pContext, "DECR %s", key.c_str());
     if (nullptr == reply) {
+        log("redisCommend failed %s", m_pContext->errstr);
         redisFree(m_pContext);
         m_pContext = nullptr;
         return -1;
@@ -602,8 +617,77 @@ long CacheConn::decr(string key) {
 
 long CacheConn::lpush(string key, string value) {
     if (Init()) {
-        return 0;
+        return -1;
     }
 
-    redisReply* reply = (redisReply*) redisCommand(m_pContext, "");
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, "LPUSH %s %s", key.c_str(), value.c_str());
+    if (nullptr == reply) {
+        log("redisCommend failed %s", m_pContext->errstr);
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+
+    long ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
+}
+
+long CacheConn::rpush(string key, string value) {
+    if (Init()) {
+        return -1;
+    }
+
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, "RPUSH %s %s", key.c_str(), value.c_str());
+    if (nullptr == reply) {
+        log("redisCommend failed %s", m_pContext->errstr);
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+
+    long ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
+}
+
+long CacheConn::llen(string key) {
+    if (Init()) {
+        return -1;
+    }
+
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, "LLEN %s", key.c_str());
+    if (nullptr == reply) {
+        log("redisCommend failed %s", m_pContext->errstr);
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+
+    long ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
+}
+
+bool CacheConn::lrange(string key, long start, long end, list<string>& ret_value) {
+    if (Init()) {
+        return false;
+    }
+
+    redisReply* reply = (redisReply*) redisCommand(m_pContext, "LRANGE %s %d %d", key.c_str(), start, end);
+    if (nullptr == reply) {
+        log("redisCommend failed %s", m_pContext->errstr);
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return false;
+    }
+
+    for (int32_t i = 0; i < reply->elements; i++) {
+        redisReply* str = reply->elements;
+        ret_value.push_back(str[i]);
+    }
+
+    freeReplyObject(reply);
+    return true;
+
 }
