@@ -3,6 +3,7 @@
 #include <string>
 #include <list>
 #include <map>
+#include <mutex>
 #include "Thread.h"
 
 #define MAX_ESCAPE_STRING_LEN 10240
@@ -19,7 +20,6 @@ public:
     char* GetString(const char* key);
 private:
     int _GetIndex(const char* key);
-    void freeMysqlRow(MYSQL_ROW row);
 
     MYSQL_RES*          m_res;
     MYSQL_ROW           m_row;  // MYSQL_ROW表示查询结果集中的一行数据
@@ -59,17 +59,20 @@ class CDBPool;
 class CDBConn {
 public:
     CDBConn(CDBPool* pDBPool);
-    virtual ~CDBConn();
+    virtual ~CDBConn() {};
     int Init();
 
     CResultSet* ExecuteQuery(const char* sql_query);
     bool ExecuteUpdate(const char* sql_query);
     char* EscapeString(const char* content, uint32_t content_len);
 
-    uint32_t GetInsertId();
+    uint32_t GetInsertId() {(uint32_t)mysql_insert_id(m_mysql);}
 
     const char* GetPoolName();
-    MYSQL* mJ_mysql;
+    MYSQL* GetMysql() {return m_mysql;}
+private:
+    CDBPool*    m_pDBPool;
+    MYSQL*      m_mysql;
     char m_escape_string[MAX_ESCAPE_STRING_LEN + 1];
 };
 
@@ -83,7 +86,12 @@ public:
     CDBConn* GetDBConn();
     void RelDBConn(CDBConn* pConn);
 
-    const char* GetPoolName() {}
+    const char* GetPoolName() {return m_pool_name.c_str();}
+    const char* GetDBServerIP() {return m_db_server_ip.c_str();}
+    uint16_t GetDBServerPort() {return m_db_server_port;}
+    const char* GetUsername() {return m_username.c_str();}
+    const char* GetPassword() {return m_password.c_str();}
+    const char* GetDBName() {return m_db_name.c_str();}
 private:
     string m_pool_name;
     string m_db_server_ip;
@@ -108,8 +116,15 @@ public:
     void RelDBConn(CDBConn* pConn);
 private:
     CDBManager();
+    static void Destructor() {
+        if (nullptr != s_db_manager) {
+            delete s_db_manager;
+            s_db_manager = nullptr;
+        }
+    }
 
 private:
-    static CDBManager* s_db_manager;
-    map<string, CDBPool> m_dbpool_map;
+    static CDBManager*      s_db_manager;
+    map<string, CDBPool*>    m_dbpool_map;
+    static std::mutex       mutex;
 };
