@@ -346,7 +346,11 @@ void CDBPool::RelDBConn(CDBConn* pConn) {
 //*****************************CDBManager***********************************//
 CDBManager::CDBManager() {}
 
-CDBManager::~CDBManager() {}
+CDBManager::~CDBManager() {
+    for (auto it : m_dbpool_map) {
+        delete it->second;
+    }
+}
 
 CDBManager* CDBManager::getInstance() {
     if (!s_db_manager) {

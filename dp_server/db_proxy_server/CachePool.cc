@@ -109,7 +109,7 @@ CachePool::CachePool(const char* pool_name, const char* server_ip, int server_po
 
 CachePool::~CachePool() {
     m_free_notify.Lock();
-    for (list<CacheConn*>::iterator it = m_free_list.begin(); it != m_free_list.end(); it++) {
+    for (auto it = m_free_list.begin(); it != m_free_list.end(); it++) {
         CacheConn* pConn = *it;
         delete pConn;
     }

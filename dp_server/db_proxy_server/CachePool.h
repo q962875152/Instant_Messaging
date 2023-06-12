@@ -62,7 +62,7 @@ public:
     void RelCacheConn(CacheConn* pCacheConn);
 
     const char* GetPoolName() {return m_pool_name.c_str(); }
-    const char* GetServerIP() {return m_server_ip.c_str};
+    const char* GetServerIP() {return m_server_ip.c_str;}
     int GetServerPort() {return m_server_port;}
     int GetDBNum() {return m_db_num};
 
