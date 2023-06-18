@@ -61,3 +61,7 @@ private:
     uint8_t     m_state;
     SOCKET      m_socket;
 }
+
+CBaseSocket* FindBaseSocket(net_handle_t fd);
+
+#endif

@@ -46,6 +46,9 @@ public:
     long llen(string key);
     bool lrange(string key, long start, long end, list<string>& ret_value);
 
+    // 发布订阅
+    // void 
+
 private:
     CachePool*      m_pCachePool;
     redisContext*   m_pContext;
